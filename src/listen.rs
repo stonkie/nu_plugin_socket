@@ -76,7 +76,26 @@ impl PluginCommand for Listen {
             // 2. Try to accept a connection.
             match listener.accept() {
                 Ok((stream, _addr)) => {
-                    // A client connected! Handle it in a new thread like before.
+                    // In single-shot mode, handle the connection synchronously so
+                    // the plugin call stays alive while the closure is evaluated
+                    // (a background thread would outlive the call and fail to
+                    // invoke the engine — "Unknown plugin call ID"). Then return.
+                    if is_single_shot {
+                        handle_connection(
+                            engine.clone(),
+                            stream,
+                            closure.clone(),
+                            head,
+                        )
+                        .map_err(|e| {
+                            LabeledError::new("Connection handler failed")
+                                .with_help(e.to_string())
+                                .with_label("here", head)
+                        })?;
+                        break;
+                    }
+
+                    // Otherwise handle each connection in its own thread.
                     let engine = engine.clone();
                     let closure = closure.clone();
                     let head = head;
@@ -91,9 +110,6 @@ impl PluginCommand for Listen {
                             );
                         }
                     });
-                    if is_single_shot {
-                        break;
-                    }
                 }
                 Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                     // `WouldBlock` means no client is waiting.
@@ -151,7 +167,7 @@ fn handle_connection(
 
     let response_bytes = match response_value {
         Value::String { val, .. } => val.into_bytes(),
-        Value::Binary { val, .. } => val,
+        Value::Binary { val, .. } => val.to_vec(),
         other => return Err(ShellError::GenericError {
             error: "Unsupported closure output".into(),
             msg: format!("Expected string or binary from closure, but got {}.", other.get_type()),

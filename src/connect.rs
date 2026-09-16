@@ -84,7 +84,7 @@ impl PluginCommand for Connect {
         let input_val = input.into_value(head)?;
         let input_bytes = match &input_val {
             Value::String { val, .. } => val.as_bytes().to_vec(),
-            Value::Binary { val, .. } => val.clone(),
+            Value::Binary { val, .. } => val.to_vec(),
             Value::Nothing { .. } => vec![],
             other => {
                 return Err(LabeledError::new("Unsupported input type")
@@ -186,6 +186,7 @@ impl PluginCommand for Connect {
             let metadata = Some(PipelineMetadata {
                 data_source: DataSource::None,
                 content_type: None,
+                path_columns: vec![],
                 custom: Record::new(),
             });
 

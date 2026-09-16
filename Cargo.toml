@@ -1,6 +1,6 @@
 [package]
 name = "nu_plugin_socket"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Iļja Ketris <ikel@vo.id.lv>"]
 description = "A Nushell plugin for low-level TCP and UDP socket communication."
@@ -20,5 +20,5 @@ categories = [
 ]
 
 [dependencies]
-nu-plugin = "0.108.0"
-nu-protocol = "0.108.0"
+nu-plugin = "0.115.1"
+nu-protocol = "0.115.1"

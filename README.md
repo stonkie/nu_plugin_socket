@@ -1,3 +1,6 @@
+Important : This is a simple fork adding --single support for an experiment I'm doing with PKCE oauth flow in nushell. This isn't meant to be maintained or production ready with the addition mostly AI written and loosely reviewed.
+
+
 # nu_plugin_socket
 
 [![Crates.io](https://img.shields.io/crates/v/nu_plugin_socket.svg)](https://crates.io/crates/nu_plugin_socket)

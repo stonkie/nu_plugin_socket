@@ -1,8 +1,8 @@
 use super::SocketPlugin;
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand};
 use nu_protocol::{
-    engine::Closure, Category, Example, LabeledError, PipelineData,
-    ShellError, Signature, Spanned, SyntaxShape, Value,
+    engine::Closure, shell_error::generic::GenericError, Category, Example, LabeledError,
+    PipelineData, ShellError, Signature, Spanned, SyntaxShape, Value,
 };
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -138,17 +138,15 @@ fn handle_connection(
 ) -> Result<(), ShellError> {
     stream
         .set_read_timeout(Some(Duration::from_secs(10)))
-        .map_err(|e| ShellError::GenericError {
-            error: "Failed to set read timeout".into(),
-            msg: e.to_string(),
-            span: Some(head),
-            help: None,
-            inner: vec![],
+        .map_err(|e| {
+            ShellError::Generic(GenericError::new("Failed to set read timeout", e.to_string(), head))
         })?;
     let mut request_bytes = vec![0; 4096];
-    let bytes_read = stream.read(&mut request_bytes).map_err(|e| ShellError::GenericError {
-        error: "Failed to read from socket".into(), msg: e.to_string(), span: Some(head),
-        help: Some("This can happen if the client disconnects or the read times out.".into()), inner: vec![]
+    let bytes_read = stream.read(&mut request_bytes).map_err(|e| {
+        ShellError::Generic(
+            GenericError::new("Failed to read from socket", e.to_string(), head)
+                .with_help("This can happen if the client disconnects or the read times out."),
+        )
     })?;
     request_bytes.truncate(bytes_read);
 
@@ -168,23 +166,18 @@ fn handle_connection(
     let response_bytes = match response_value {
         Value::String { val, .. } => val.into_bytes(),
         Value::Binary { val, .. } => val.to_vec(),
-        other => return Err(ShellError::GenericError {
-            error: "Unsupported closure output".into(),
-            msg: format!("Expected string or binary from closure, but got {}.", other.get_type()),
-            span: Some(head),
-            help: Some("The closure for `socket listen` must return a string or binary value.".into()),
-            inner: vec![],
-        })
+        other => return Err(ShellError::Generic(
+            GenericError::new(
+                "Unsupported closure output",
+                format!("Expected string or binary from closure, but got {}.", other.get_type()),
+                head,
+            )
+            .with_help("The closure for `socket listen` must return a string or binary value."),
+        ))
     };
 
     stream.write_all(&response_bytes).map_err(|e| {
-        ShellError::GenericError {
-            error: "Failed to write to socket".into(),
-            msg: e.to_string(),
-            span: Some(head),
-            help: None,
-            inner: vec![],
-        }
+        ShellError::Generic(GenericError::new("Failed to write to socket", e.to_string(), head))
     })?;
 
     Ok(())
